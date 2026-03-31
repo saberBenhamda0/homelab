@@ -1,0 +1,30 @@
+---
+- hosts: all
+  become: true
+
+  roles:
+    - role: k3s-master
+      when:
+        - k3s_master | default (false) | bool
+
+    - role: k3s-worker
+      when:
+        - k3s_worker | default (false) | bool
+
+    - role: docker
+      when:         
+        - managed_docker | default (false) | bool
+
+    - role: consul
+      when:
+        - managed_docker | default (false) | bool
+
+    - role: traefik
+      when: 
+        - not this_consul_client | default (false) | bool
+        - managed_docker | default (false) | bool
+        
+    - role: service
+      when: 
+        - this_consul_client | default (false) | bool
+        - managed_docker | default (false) | bool

@@ -1,0 +1,159 @@
+- name: Install prerequisites
+  apt:
+    name:
+      - gnupg
+      - wget
+      - lsb-release
+    state: present
+    update_cache: true
+
+- name: Download and dearmor HashiCorp GPG key
+  ansible.builtin.shell:
+    cmd: >
+      wget -O - https://apt.releases.hashicorp.com/gpg |
+      gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+- name: Set correct permissions on GPG keyring
+  ansible.builtin.file:
+    path: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Get system architecture
+  ansible.builtin.command: dpkg --print-architecture
+  register: dpkg_arch
+  changed_when: false
+
+- name: Get Ubuntu codename
+  ansible.builtin.shell:
+    cmd: >
+      grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release ||
+      lsb_release -cs
+  register: ubuntu_codename
+  changed_when: false
+
+- name: Add HashiCorp APT repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ dpkg_arch.stdout }}
+      signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg]
+      https://apt.releases.hashicorp.com {{ ubuntu_codename.stdout }} main
+    filename: hashicorp
+    state: present
+
+- name: Update APT cache and install Consul
+  ansible.builtin.apt:
+    name: consul
+    state: present
+    update_cache: true
+
+- name: Verify Consul installation
+  ansible.builtin.command: consul version
+  register: consul_version
+  changed_when: false
+
+- name: Display installed Consul version
+  ansible.builtin.debug:
+    msg: "{{ consul_version.stdout }}"
+
+- name: Ensure Consul config directory exists
+  ansible.builtin.file:
+    path: /etc/consul.d
+    state: directory
+    owner: consul
+    group: consul
+    mode: "0755"
+
+- name: Ensure Consul data directory exists
+  ansible.builtin.file:
+    path: /opt/consul/data
+    state: directory
+    owner: consul
+    group: consul
+    mode: "0755"
+
+
+- name: Deploy Consul Server config
+  ansible.builtin.copy:
+    dest: /etc/consul.d/consul.hcl
+    owner: consul
+    group: consul
+    mode: "0640"
+    content: |
+      data_dir  = "/opt/consul/data"
+      bind_addr = "{{ ansible_host }}"
+      client_addr = "0.0.0.0"
+      server           = true
+      bootstrap_expect = 1
+      ui_config {
+        enabled = true
+        # dashboard at http://{{ ansible_host }}:8500
+      }
+  notify: Restart Consul
+  when: not this_consul_client | default (false) | bool
+
+
+- name: Deploy Consul Client config
+  ansible.builtin.copy:
+    dest: /etc/consul.d/consul.hcl
+    owner: consul
+    group: consul
+    mode: "0640"
+    content: |
+      data_dir    = "/opt/consul/data"
+      bind_addr   = "{{ ansible_host }}"
+      client_addr = "0.0.0.0"
+
+      retry_join  = ["{{ consul_server }}"]  # your Consul server IP
+  notify: Restart Consul
+  when: this_consul_client | default (true) | bool
+
+
+- name: Deploy webapp Consul service config
+  ansible.builtin.copy:
+    dest: /etc/consul.d/webapp.json
+    owner: consul
+    group: consul
+    mode: "0640"
+    content: |
+      {
+        "service": {
+          "name": "webapp",
+          "port": 80,
+          "tags": [
+            "traefik.enable=true",
+            "traefik.http.routers.webapp.rule=PathPrefix(`/`)",
+            "traefik.http.routers.webapp.entrypoints=web"
+          ]
+        }
+      }
+  notify: Reload Consul
+  when: this_consul_client | default (true) | bool
+
+- name: Deploy Consul systemd service file
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/consul.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Consul
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/bin/consul agent -config-dir=/etc/consul.d/
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Reload systemd
+
+- name: Enable and start Consul
+  ansible.builtin.systemd:
+    name: consul
+    enabled: true
+    state: started
+    daemon_reload: true

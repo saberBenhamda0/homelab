@@ -1,0 +1,79 @@
+---
+
+- name: Ensure Traefik config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/traefik
+
+- name: Deploy Traefik static config
+  ansible.builtin.copy:
+    dest: /etc/traefik/traefik.yml
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # traefik.yml
+      entryPoints:
+        web:
+          address: ":80"
+      providers:
+        consulCatalog:
+          endpoint:
+            address: "http://host.docker.internal:8500"
+          exposedByDefault: false   # only services with traefik.enable=true
+          refreshInterval: "5s"     # how often Traefik polls Consul
+  notify: Restart Traefik
+
+- name: Deploy Traefik docker-compose file
+  ansible.builtin.copy:
+    dest: /etc/traefik/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      services:
+        traefik:
+          image: traefik:v3.0
+          container_name: traefik
+          restart: unless-stopped
+          ports:
+            - "80:80"
+          volumes:
+            - /etc/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+          extra_hosts:
+            - "host.docker.internal:host-gateway"
+          networks:
+            - proxy
+
+      networks:
+        proxy:
+          driver: bridge
+
+- name: Pull Traefik image
+  community.docker.docker_image:
+    name: traefik
+    tag: v3.0
+    source: pull
+
+- name: Deploy Traefik via docker compose
+  community.docker.docker_compose_v2:
+    project_src: /etc/traefik
+    state: present
+    pull: missing
+
+- name: Verify Traefik container is running
+  community.docker.docker_container_info:
+    name: traefik
+  register: traefik_info
+
+- name: Assert Traefik is healthy
+  ansible.builtin.assert:
+    that:
+      - traefik_info.container.State.Running
+    fail_msg: "Traefik container is NOT running!"
+    success_msg: "Traefik is running (ID: {{ traefik_info.container.Id[:12] }})"

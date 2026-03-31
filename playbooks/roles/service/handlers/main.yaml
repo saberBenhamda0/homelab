@@ -1,0 +1,4 @@
+- name: Restart webapp
+  ansible.builtin.shell:
+    cmd: docker compose up -d --force-recreate
+    chdir: /opt/services/webapp

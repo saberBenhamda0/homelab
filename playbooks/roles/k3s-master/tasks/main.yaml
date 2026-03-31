@@ -1,0 +1,42 @@
+- name: Install K3s master node
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --disable servicelb \
+      --disable traefik \
+      --write-kubeconfig-mode 644 \
+      --node-name {{ inventory_hostname }}
+  args:
+    creates: /usr/local/bin/k3s
+  become: true
+
+- name: Wait for K3s to be ready
+  shell: kubectl get nodes
+  register: nodes
+  until: "'Ready' in nodes.stdout"
+  retries: 15
+  delay: 10
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Fetch node token
+  fetch:
+    src: /var/lib/rancher/k3s/server/node-token
+    dest: /tmp/k3s-token
+    flat: yes
+  become: true
+
+# the dest is in the ansible control plan so we can manipulate and control the cluster from the ansible control plan
+- name: Fetch kubeconfig
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /tmp/k3s.yaml
+    flat: yes
+  become: true
+
+- name: Replace localhost with master IP in kubeconfig
+  delegate_to: localhost
+  replace:
+    path: /tmp/k3s.yaml
+    regexp: '127.0.0.1'
+    replace: "{{ ansible_host }}"

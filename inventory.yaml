@@ -1,0 +1,37 @@
+all:
+  children:
+    lan_infra:
+      hosts:
+        ansible:
+          ansible_host: 192.168.1.9
+          ansible_user: root
+        pfsense:
+          ansible_host: 192.168.1.1
+          ansible_user: root
+        control-panel:
+          ansible_host: 192.168.1.10
+          ansible_user: root
+    vlan_10:
+      children:
+        VMs:
+          hosts: {}
+        managed_docker:
+          children:
+            master_node:
+              hosts:
+                master-1:
+                  ansible_host: 192.168.10.118
+            worker_node:
+              hosts:
+                worker-1:
+                  ansible_host: 192.168.10.119
+        kubernetes:
+          children:
+            master_node:
+              hosts:
+                master-1:
+                  ansible_host: 192.168.1.55
+            worker_node:
+              hosts:
+                worker-1:
+                  ansible_host: 192.168.1.56

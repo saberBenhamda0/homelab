@@ -1,0 +1,57 @@
+- name: Ensure webapp service directory exists
+  ansible.builtin.file:
+    path: /opt/services/webapp
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy webapp docker-compose file
+  ansible.builtin.copy:
+    dest: /opt/services/webapp/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      services:
+        webapp:
+          image: nginx:latest
+          container_name: webapp
+          restart: unless-stopped
+          ports:
+            - "80:80"
+          volumes:
+            - ./html:/usr/share/nginx/html:ro
+
+- name: Ensure html directory exists
+  ansible.builtin.file:
+    path: /opt/services/webapp/html
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy basic index.html
+  ansible.builtin.copy:
+    dest: /opt/services/webapp/html/index.html
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      <!DOCTYPE html>
+      <html>
+        <head><title>webapp</title></head>
+        <body><h1>webapp is running</h1></body>
+      </html>
+
+- name: Pull nginx image
+  ansible.builtin.shell:
+    cmd: docker compose pull
+    chdir: /opt/services/webapp
+  changed_when: false
+
+- name: Start webapp via docker compose
+  ansible.builtin.shell:
+    cmd: docker compose up -d
+    chdir: /opt/services/webapp
+  changed_when: false
