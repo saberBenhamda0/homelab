@@ -6,7 +6,7 @@ from proxmoxer import ProxmoxAPI
 from lxc.lxc_ops import create_container
 
 # Imports for refactored structure
-from service.service_ops import create_managed_docker, select_service
+from service.service_ops import create_managed_docker, select_service, created_managed_kubernetes
 from config import ANSIBLE_CONTROL_PANEL_IP, PROXMOX_IP, TOKEN_NAME, TOKEN_VALUE, USER
 
 # ===============================
@@ -36,6 +36,8 @@ if __name__ == "__main__":
         create_container(proxmox, 10, "VM", "")
     elif result == "MANAGED_DOCKER":
         create_managed_docker(proxmox)
+    elif result == 'KUBERNETES':
+        created_managed_kubernetes(proxmox)
     # create_vm_example(proxmox)
     # create_container(proxmox, ...)
     # create_managed_docker(proxmox)

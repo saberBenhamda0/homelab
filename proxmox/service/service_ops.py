@@ -1,5 +1,6 @@
 # Functions for creating and managing services (VM, Kubernetes, Managed Docker)
 from lxc.lxc_ops import create_container
+from vm.vm_ops import create_vm_example
 from InquirerPy import inquirer
 from enum import Enum
 
@@ -59,4 +60,25 @@ def create_managed_docker(proxmox):
             subType = ServiceSubType.WORKER_NODE.name
 
         create_container(proxmox, 10, ServiceType.MANAGED_DOCKER.name, subType)
+        n = n + 1
+
+
+def created_managed_kubernetes(proxmox):
+    count = inquirer.select(
+        message="How Many worker node you want for k8",
+        choices=[1, 2, 3, 4, 5, 6],
+    ).execute()
+ 
+    if not count:
+        return None
+    
+    n = 0
+    while n <= count:
+        subType = ""
+        if(n == 0):
+            subType = ServiceSubType.MASTER_NODE.name
+        else:
+            subType = ServiceSubType.WORKER_NODE.name
+
+        create_vm_example(proxmox, 10, ServiceType.KUBERNETES.name, subType)
         n = n + 1

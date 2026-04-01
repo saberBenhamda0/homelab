@@ -3,7 +3,7 @@ from shared.utils import wait_for_ip, start_vm, get_nodes, get_node_info, get_ne
 from pfsense.ansible.ansible_ops import register_host_in_ansible
 from InquirerPy import inquirer
 import typer
-from config import VLAN_TAG
+from config import VLAN_TAG, ANSIBLE_CONTROL_PANEL_IP
 
 
 def get_available_iso_images(proxmox, node, storage=None):
@@ -48,7 +48,7 @@ def get_available_iso_images(proxmox, node, storage=None):
     return sorted(iso_images, key=lambda x: x["name"])
 
 
-def create_vm_example(proxmox):
+def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
     """Example of creating a new VM"""
 
     nodes = get_nodes(proxmox)
@@ -62,6 +62,8 @@ def create_vm_example(proxmox):
 
     vms_image = get_available_iso_images(proxmox, selected_node)
     existing_iso = [image.get("volid") for image in vms_image]
+
+    container_hostname = typer.prompt("Please enter the hostname of your container")
 
     selected_vm = inquirer.select(
         message="Select The VM you want to create :",
@@ -84,6 +86,7 @@ def create_vm_example(proxmox):
         message=f"How many cores you want in each socket in the vm (max: {specs['cores_per_socket']}) :",
         choices=[1, 2, 3, 4, 5, 6, 7, 8],
     ).execute()
+
 
     next_valid_id = get_next_vmid(proxmox)
 
@@ -112,6 +115,6 @@ def create_vm_example(proxmox):
 
     container_ip_address = wait_for_ip(proxmox, selected_node, next_valid_id)
 
-    register_host_in_ansible(container_ip_address, "vlan_10", "192.168.1.10")
+    register_host_in_ansible(container_ip_address, "vlan_10", ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
 
     print(f"VM {next_valid_id} created successfully!")

@@ -2,17 +2,18 @@ import subprocess
 import typer
 app = typer.Typer()
 from rich import print
+from service.service_ops import ServiceType, ServiceSubType
 
 
 
 
-def configure_host(ansible_ip, vlan, serviceType, serviceSubType, consul_server: str = None):
+def configure_host(ansible_ip,vlan, serviceType, serviceSubType, consul_server: str = None, k3s_control_plan: str = None):
 
     command = f"ansible-playbook /root/ansible/playbooks/site.yaml -i /root/ansible/inventory.yaml"
 
-    if serviceType == "MANAGED_DOCKER":
+    if serviceType == ServiceType.MANAGED_DOCKER.name:
         
-        if serviceSubType == "WORKER_NODE":
+        if serviceSubType == ServiceSubType.WORKER_NODE.name:
 
             if not consul_server:
                 print("[bold red]✗ consul_server is required for worker node[/bold red]")
@@ -21,14 +22,22 @@ def configure_host(ansible_ip, vlan, serviceType, serviceSubType, consul_server:
             command += f' --limit "{vlan}:&managed_docker:&worker_node" -e "this_consul_client=true managed_docker=true consul_server={consul_server}"'
             print("configure the worker node ...")
 
-        elif serviceSubType == "MASTER_NODE":
+        elif serviceSubType == ServiceSubType.MASTER_NODE.name:
             
             command +=f' --limit "{vlan}:&managed_docker:&master_node" -e "this_consul_client=false managed_docker=true"'
             print("configure the master node ...")
 
-    elif serviceType == "KUBERNETES":
-        return
-    elif serviceType == "VM":
+    elif serviceType == ServiceType.KUBERNETES.name:
+        
+        if serviceSubType == ServiceSubType.WORKER_NODE.name:
+            command +=f' --limit "{vlan}:&kubernetes:&worker_node" -e "k3s_worker=true master_ip={k3s_control_plan}" -u debian --become'
+            print("configuring the worker node")
+
+        elif serviceSubType == ServiceSubType.MASTER_NODE.name:
+            command +=f' --limit "{vlan}:&kubernetes:&master_node" -e "k3s_master=true" -u debian --become'
+            print("configure the k3s control plan node ...")
+    
+    elif serviceType == ServiceType.VM.name:
         print("no configuration has been done because we create a normal VM")
         return
 
@@ -62,22 +71,26 @@ def register_host_in_ansible(
     print(f"[bold blue]Registering {ip} in Ansible...[/bold blue]")
     
     command = ""
-    print(ansible_host)
     # the consul server we going put in client node in managed docker service
     consul_server = None
 
-    if serviceType == "VM":
+    if serviceType == ServiceType.VM:
         command  = f"python3 /root/ansible/inventory_cli.py add --type vm --vlan {group} --name {host_name} --ip {ip}"
         print("we inside the vm condition")
-    elif serviceType == "KUBERNETES":
+    elif serviceType == ServiceType.KUBERNETES:
         command = ""
+        if serviceSubType == ServiceSubType.WORKER_NODE:
+            command = f"python3 /root/ansible/inventory_cli.py add --type k8s-worker  --vlan {group} --name {host_name} --ip {ip}"
 
-    elif serviceType == "MANAGED_DOCKER":
+        elif serviceSubType == ServiceSubType.MASTER_NODE:
+            command = f"python3 /root/ansible/inventory_cli.py add --type k8s-master  --vlan {group} --name {host_name} --ip {ip}"
 
-        if serviceSubType == "WORKER_NODE":
+    elif serviceType == ServiceType.MANAGED_DOCKER:
+
+        if serviceSubType == ServiceSubType.WORKER_NODE:
             command  = f"python3 /root/ansible/inventory_cli.py add --type docker-worker  --vlan {group} --name {host_name} --ip {ip}"
 
-        elif serviceSubType == "MASTER_NODE":
+        elif serviceSubType == ServiceSubType.MASTER_NODE:
             command  = f"python3 /root/ansible/inventory_cli.py add --type docker-master  --vlan {group} --name {host_name} --ip {ip}"
 
 
@@ -89,7 +102,7 @@ def register_host_in_ansible(
         f"{command}",
     ],capture_output=True, text=True)
 
-    if serviceType == "MANAGED_DOCKER" and serviceSubType == "WORKER_NODE":
+    if serviceType == ServiceType.MANAGED_DOCKER and serviceSubType == ServiceSubType.WORKER_NODE:
         
         get_master_ip_command = f"python3 /root/ansible/inventory_cli.py get-master-ip-cli --type docker --vlan {group}"
         get_master_ip_result = subprocess.run([
@@ -111,9 +124,12 @@ def register_host_in_ansible(
         print(result.stdout)
         print(f"[bold red]✗ Failed: {result.stderr}[/bold red]")
 
+    hostname = "root"
+    if serviceType == ServiceType.KUBERNETES:
+        hostname = "debian"
     
     # configure the container that we just created
-    configure_host(ansible_host, group, serviceType, serviceSubType, consul_server)
+    configure_host(ansible_host,group, serviceType, serviceSubType, consul_server)
 
 @app.command()
 def unregister_host_from_ansible(
