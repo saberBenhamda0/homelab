@@ -4,15 +4,17 @@ from pfsense.ansible.ansible_ops import register_host_in_ansible
 from InquirerPy import inquirer
 import typer
 from config import VLAN_TAG, ANSIBLE_CONTROL_PANEL_IP
+import time
+import sys
 
 
-def get_available_iso_images(proxmox, node, storage=None):
+def get_available_templates(proxmox, node, storage=None, only_templates=False):
     """
-    Get all available ISO images for VM creation.
+    Get all available LXC templates for container creation.
 
-    Returns list of ISO images with their details.
+    Returns list of LXC templates with their details.
     """
-    iso_images = []
+    templates = []
 
     # Get all storages or specific storage
     if storage:
@@ -20,33 +22,62 @@ def get_available_iso_images(proxmox, node, storage=None):
     else:
         storages = proxmox.nodes(node).storage.get()
 
-    # Check each storage for ISO content
+    # Check each storage for template content
     for store in storages:
         storage_name = store["storage"]
 
         try:
-            # Get ISO content from this storage
-            content = (
-                proxmox.nodes(node).storage(storage_name).content.get(content="iso")
-            )
+            # Get template content from this storage
+            content = proxmox.nodes(node).storage(storage_name).content.get()
 
             for item in content:
-                filename = item["volid"].split("/")[-1]
 
-                iso_images.append(
-                    {
-                        "volid": item["volid"],  # Use this when creating VMs
-                        "name": filename,
-                        "size_gb": item.get("size", 0) / (1024**3),
-                        "storage": storage_name,
-                    }
-                )
+                # Safely get the volid and handle naming
+                volid = item.get("volid", "")
+
+                # Extract filename: handles 'local:vztmpl/ubuntu...' and 'local-lvm:base-103...'
+                if "/" in volid:
+                    filename = volid.split("/")[-1]
+                else:
+                    filename = volid.split(":")[-1]
+
+
+
+                # Combine the checks into one condition to avoid code duplication
+                is_cloud_image_container = item.get("content") == "images"
+                # is_vztmpl = item.get("content") == "vztmpl"
+                is_base_clone = "base-" in volid
+
+                if only_templates:
+                    if is_cloud_image_container and is_base_clone:
+                        templates.append(
+                            {
+                                "vmid": item.get("vmid"),
+                                "volid": volid,
+                                "name": filename,
+                                "size_mb": item.get("size", 0) / (1024**2),
+                                "storage": storage_name,
+                            }
+                        )
+                else:
+                    if is_cloud_image_container:
+                        # to skip pfsense firewall image
+                        if item.get("vmid") == 100:
+                            continue
+                        templates.append(
+                            {
+                                "vmid": item.get("vmid"),
+                                "volid": volid,
+                                "name": filename,
+                                "size_mb": item.get("size", 0) / (1024**2),
+                                "storage": storage_name,
+                            }
+                        )
         except:
-            # Storage doesn't have ISOs, skip
+            # Storage doesn't have templates, skip
             pass
 
-    return sorted(iso_images, key=lambda x: x["name"])
-
+    return sorted(templates, key=lambda x: x["name"])
 
 def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
     """Example of creating a new VM"""
@@ -60,7 +91,7 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     specs = get_node_info(proxmox, selected_node)
 
-    vms_image = get_available_iso_images(proxmox, selected_node)
+    vms_image = get_available_templates(proxmox, selected_node,None, False)
     existing_iso = [image.get("volid") for image in vms_image]
 
     container_hostname = typer.prompt("Please enter the hostname of your container")
@@ -104,8 +135,37 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
         "boot": "order=scsi0",
     }
 
-    # # Create the VM
-    proxmox.nodes(selected_node).qemu.create(**vm_config)
+    selected_vm_object = next(
+        template
+        for template in vms_image 
+        if template.get("volid") == selected_vm
+    )
+
+    if "base-" in selected_vm:
+        task = (
+            proxmox.nodes(selected_node)
+            .qemu(selected_vm_object.get("vmid"))
+            .clone.post(
+                newid=next_valid_id,
+                full=1,
+            )
+        )
+
+        # when we first create the container we need to wait until it finished because it gonna be locked.
+        print("⏳ Waiting for clone to finish...")
+        while True:
+            task_status = proxmox.nodes(selected_node).tasks(task).status.get()
+            if task_status["status"] == "stopped":
+                if task_status["exitstatus"] == "OK":
+                    print("✅ Clone finished!")
+                    break
+                else:
+                    print(f"❌ Clone failed: {task_status['exitstatus']}")
+                    sys.exit(1)
+            time.sleep(2)
+    else:
+        # # Create the VM
+        proxmox.nodes(selected_node).qemu.create(**vm_config)
     # print("VM creation code is commented out. Uncomment to use.")
 
     # give the container a vlan tag
@@ -113,7 +173,12 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     start_vm(proxmox, selected_node, next_valid_id)
 
-    container_ip_address = wait_for_ip(proxmox, selected_node, next_valid_id)
+    # waiting 170 second because that is the average time for vm to start
+    time.sleep(170)
+
+    container_ip_address = wait_for_ip(proxmox, selected_node, next_valid_id, 60, "vm")
+
+    print(container_ip_address)
 
     register_host_in_ansible(container_ip_address, "vlan_10", ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
 

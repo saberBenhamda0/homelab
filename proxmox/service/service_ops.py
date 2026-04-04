@@ -2,17 +2,8 @@
 from lxc.lxc_ops import create_container
 from vm.vm_ops import create_vm_example
 from InquirerPy import inquirer
-from enum import Enum
+from shared.utils import ServiceType, ServiceSubType
 
-
-class ServiceType(Enum):
-    VM = "VM"
-    KUBERNETES = "Kubernetes"
-    MANAGED_DOCKER = "Managed Docker Container"
-
-class ServiceSubType(Enum):
-    WORKER_NODE = "Worker_node"
-    MASTER_NODE = "Master_node"
 
 
 SERVICES = [

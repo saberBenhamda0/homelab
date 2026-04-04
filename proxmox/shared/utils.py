@@ -1,6 +1,17 @@
 # Shared utility functions for LXC, VM, and services
 
 import time
+from enum import Enum
+import traceback
+
+class ServiceType(Enum):
+    VM = "VM"
+    KUBERNETES = "Kubernetes"
+    MANAGED_DOCKER = "Managed Docker Container"
+
+class ServiceSubType(Enum):
+    WORKER_NODE = "Worker_node"
+    MASTER_NODE = "Master_node"
 
 
 def get_nodes(proxmox):
@@ -48,8 +59,9 @@ def wait_for_ip(proxmox, node, vmid, timeout=60, vm_type="lxc"):
                         for addr in iface.get("ip-addresses", []):
                             if addr.get("ip-address-type") == "ipv4":
                                 return addr["ip-address"]
-        except Exception:
-            pass
+        except Exception as e:
+            print("Exception happened:", e)
+            traceback.print_exc()
         time.sleep(3)
     raise TimeoutError(f"VM {vmid} didn't get an IP within {timeout}s")
 

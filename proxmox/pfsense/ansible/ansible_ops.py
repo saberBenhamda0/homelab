@@ -2,7 +2,7 @@ import subprocess
 import typer
 app = typer.Typer()
 from rich import print
-from service.service_ops import ServiceType, ServiceSubType
+from shared.utils import ServiceType, ServiceSubType
 
 
 

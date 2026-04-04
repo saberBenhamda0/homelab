@@ -36,6 +36,7 @@ def get_available_lxc_templates(proxmox,node, storage=None):
             content = proxmox.nodes(node).storage(storage_name).content.get()
 
             for item in content:
+
                 # Safely get the volid and handle naming
                 volid = item.get("volid", "")
 
@@ -47,7 +48,11 @@ def get_available_lxc_templates(proxmox,node, storage=None):
 
                 # Combine the checks into one condition to avoid code duplication
                 is_vztmpl = item.get("content") == "vztmpl"
+                is_cloud_image_container = item.get("content") == "images"
                 is_base_clone = "base-" in volid
+
+                if is_cloud_image_container:
+                    continue
 
                 if is_vztmpl or is_base_clone:
                     templates.append(
