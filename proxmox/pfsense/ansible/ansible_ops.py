@@ -10,7 +10,9 @@ from shared.utils import ServiceType, ServiceSubType
 def configure_host(ansible_ip,vlan, serviceType, serviceSubType, consul_server: str = None, k3s_control_plan: str = None):
 
     command = f"ansible-playbook /root/ansible/playbooks/site.yaml -i /root/ansible/inventory.yaml"
-
+	
+    print("service type : " + serviceType)
+    print("service subtype : " + serviceSubType)
     if serviceType == ServiceType.MANAGED_DOCKER.name:
         
         if serviceSubType == ServiceSubType.WORKER_NODE.name:
@@ -74,26 +76,26 @@ def register_host_in_ansible(
     # the consul server we going put in client node in managed docker service
     consul_server = None
 
-    if serviceType == ServiceType.VM:
+    if serviceType == ServiceType.VM.name:
         command  = f"python3 /root/ansible/inventory_cli.py add --type vm --vlan {group} --name {host_name} --ip {ip}"
         print("we inside the vm condition")
-    elif serviceType == ServiceType.KUBERNETES:
+    elif serviceType == ServiceType.KUBERNETES.name:
         command = ""
         print("we are in k8 if condition")
-        if serviceSubType == ServiceSubType.WORKER_NODE:
+        if serviceSubType == ServiceSubType.WORKER_NODE.name:
             print(" we are in worker node k8 condition")
             command = f"python3 /root/ansible/inventory_cli.py add --type k8s-worker  --vlan {group} --name {host_name} --ip {ip}"
 
-        elif serviceSubType == ServiceSubType.MASTER_NODE:
+        elif serviceSubType == ServiceSubType.MASTER_NODE.name:
             print("we are in master node k8 configuraation")
             command = f"python3 /root/ansible/inventory_cli.py add --type k8s-master  --vlan {group} --name {host_name} --ip {ip}"
 
-    elif serviceType == ServiceType.MANAGED_DOCKER:
+    elif serviceType == ServiceType.MANAGED_DOCKER.name:
 
-        if serviceSubType == ServiceSubType.WORKER_NODE:
+        if serviceSubType == ServiceSubType.WORKER_NODE.name:
             command  = f"python3 /root/ansible/inventory_cli.py add --type docker-worker  --vlan {group} --name {host_name} --ip {ip}"
 
-        elif serviceSubType == ServiceSubType.MASTER_NODE:
+        elif serviceSubType == ServiceSubType.MASTER_NODE.name:
             command  = f"python3 /root/ansible/inventory_cli.py add --type docker-master  --vlan {group} --name {host_name} --ip {ip}"
 
 
@@ -105,7 +107,7 @@ def register_host_in_ansible(
         f"{command}",
     ],capture_output=True, text=True)
 
-    if serviceType == ServiceType.MANAGED_DOCKER and serviceSubType == ServiceSubType.WORKER_NODE:
+    if serviceType == ServiceType.MANAGED_DOCKER.name and serviceSubType == ServiceSubType.WORKER_NODE.name:
         
         get_master_ip_command = f"python3 /root/ansible/inventory_cli.py get-master-ip-cli --type docker --vlan {group}"
         get_master_ip_result = subprocess.run([
@@ -128,7 +130,7 @@ def register_host_in_ansible(
         print(f"[bold red]✗ Failed: {result.stderr}[/bold red]")
 
     hostname = "root"
-    if serviceType == ServiceType.KUBERNETES:
+    if serviceType == ServiceType.KUBERNETES.name:
         hostname = "debian"
     
     # configure the container that we just created
