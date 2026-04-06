@@ -79,10 +79,13 @@ def register_host_in_ansible(
         print("we inside the vm condition")
     elif serviceType == ServiceType.KUBERNETES:
         command = ""
+        print("we are in k8 if condition")
         if serviceSubType == ServiceSubType.WORKER_NODE:
+            print(" we are in worker node k8 condition")
             command = f"python3 /root/ansible/inventory_cli.py add --type k8s-worker  --vlan {group} --name {host_name} --ip {ip}"
 
         elif serviceSubType == ServiceSubType.MASTER_NODE:
+            print("we are in master node k8 configuraation")
             command = f"python3 /root/ansible/inventory_cli.py add --type k8s-master  --vlan {group} --name {host_name} --ip {ip}"
 
     elif serviceType == ServiceType.MANAGED_DOCKER:
