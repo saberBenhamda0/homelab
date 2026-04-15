@@ -18,7 +18,7 @@ def enable_dhcp_server(new_vlan_id, range_from, range_to, dns_server, gateway, n
         "maxleasetime": 86400,
     }
     try:
-        response = session.post(
+        response = session.patch(
             f"{BASE_URL}/api/v2/services/dhcp_server",
             json=dhcp_payload
         )
