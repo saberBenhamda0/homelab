@@ -188,7 +188,7 @@ def create_container(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
     
     # give the container a vlan tag
     proxmox.nodes(selected_node).lxc(
-        selected_template_object.get("vmid")
+        next_valid_id,
     ).config.put(net0=f"name=eth0,bridge=vmbr1,tag={vlan_tag},ip=dhcp")
 
     start_container(proxmox, selected_node, next_valid_id)

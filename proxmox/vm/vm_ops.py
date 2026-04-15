@@ -129,7 +129,6 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
             if task_status["status"] == "stopped":
                 if task_status["exitstatus"] == "OK":
                     print("✅ Clone finished!")
-                    proxmox.nodes(selected_node).qemu(next_valid_id).config.put(net0=f"name=eth0,bridge=vmbr1,tag={vlan_tag},ip=dhcp")
                     break
                 else:
                     print(f"❌ Clone failed: {task_status['exitstatus']}")
@@ -172,7 +171,7 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
     # print("VM creation code is commented out. Uncomment to use.")
 
     # give the container a vlan tag
-    # proxmox.nodes(selected_node).qemu(next_valid_id).config.put(net0=f"name=eth0,bridge=vmbr1,tag=10,ip=dhcp")
+    proxmox.nodes(selected_node).qemu(next_valid_id).config.put(net0=f"name=eth0,bridge=vmbr1,tag={vlan_tag},ip=dhcp")
 
     start_vm(proxmox, selected_node, next_valid_id)
 
