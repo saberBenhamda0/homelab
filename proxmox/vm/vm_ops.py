@@ -103,37 +103,8 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     vm_name = typer.prompt("Please enter your the name of your vm")
 
-    memory_in_gb = inquirer.select(
-        message=f"How many GB of RAM you want in the vm (MAX: {int(specs['total_memory'])}) :",
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-    ).execute()
-
-    socket_in_vm = inquirer.select(
-        message=f"How many socket you want in the vm (max : {specs['sockets']}) :",
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-    ).execute()
-
-    cores_in_vm = inquirer.select(
-        message=f"How many cores you want in each socket in the vm (max: {specs['cores_per_socket']}) :",
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-    ).execute()
-
-
     next_valid_id = get_next_vmid(proxmox)
 
-    # VM configuration
-    vm_config = {
-        "vmid": next_valid_id,
-        "name": vm_name,
-        "memory": int(memory_in_gb * 1024),
-        "cores": cores_in_vm,
-        "sockets": socket_in_vm,
-        "net0": f"virtio,bridge=vmbr1,tag={VLAN_TAG}", # i also need to enable dhcp
-        "ide2": f"{selected_vm},media=cdrom",
-        "scsi0": "local-lvm:32",
-        "ostype": "l26",  # Linux 2.6+ kernel
-        "boot": "order=scsi0",
-    }
 
     selected_vm_object = next(
         template
@@ -158,12 +129,44 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
             if task_status["status"] == "stopped":
                 if task_status["exitstatus"] == "OK":
                     print("✅ Clone finished!")
+                    proxmox.nodes(selected_node).qemu(next_valid_id).config.put(net0=f"name=eth0,bridge=vmbr1,tag={vlan_tag},ip=dhcp")
                     break
                 else:
                     print(f"❌ Clone failed: {task_status['exitstatus']}")
                     sys.exit(1)
             time.sleep(2)
     else:
+
+        memory_in_gb = inquirer.select(
+            message=f"How many GB of RAM you want in the vm (MAX: {int(specs['total_memory'])}) :",
+            choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        ).execute()
+
+        socket_in_vm = inquirer.select(
+            message=f"How many socket you want in the vm (max : {specs['sockets']}) :",
+            choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        ).execute()
+
+        cores_in_vm = inquirer.select(
+            message=f"How many cores you want in each socket in the vm (max: {specs['cores_per_socket']}) :",
+            choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        ).execute()
+
+
+
+        # VM configuration
+        vm_config = {
+            "vmid": next_valid_id,
+            "name": vm_name,
+            "memory": int(memory_in_gb * 1024),
+            "cores": cores_in_vm,
+            "sockets": socket_in_vm,
+            "net0": f"virtio,bridge=vmbr1,tag={vlan_tag}", # i also need to enable dhcp
+            "ide2": f"{selected_vm},media=cdrom",
+            "scsi0": "local-lvm:32",
+            "ostype": "l26",  # Linux 2.6+ kernel
+            "boot": "order=scsi0",
+        }
         # # Create the VM
         proxmox.nodes(selected_node).qemu.create(**vm_config)
     # print("VM creation code is commented out. Uncomment to use.")
@@ -180,6 +183,9 @@ def create_vm_example(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     print(container_ip_address)
 
-    register_host_in_ansible(container_ip_address, "vlan_10", ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
+
+    VLAN_NAME_FOR_ANSIBLE_INVENTORY = f"vlan_{vlan_tag}"
+
+    register_host_in_ansible(container_ip_address, VLAN_NAME_FOR_ANSIBLE_INVENTORY, ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
 
     print(f"VM {next_valid_id} created successfully!")

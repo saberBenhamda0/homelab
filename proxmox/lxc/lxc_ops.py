@@ -117,36 +117,8 @@ def create_container(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     container_hostname = typer.prompt("Please enter the hostname of your container")
 
-    memory_in_gb = inquirer.select(
-        message=f"How many GB of RAM you want in the container (MAX: {int(specs['total_memory'])}) :",
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-    ).execute()
-
-    cores_in_container = inquirer.select(
-        message=f"How many cores you want in the container (max: {specs['cores_per_socket'] * specs['sockets']}) :",
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-    ).execute()
-
-    disk_size = inquirer.select(
-        message="Disk size in GB:",
-        choices=[4, 8, 16, 32, 64, 128],
-    ).execute()
-
     next_valid_id = get_next_vmid(proxmox)
 
-    # Container configuration
-    container_config = {
-        "vmid": next_valid_id,
-        "hostname": container_hostname,
-        "ostemplate": selected_template,
-        "memory": int(memory_in_gb * 1024),
-        "cores": cores_in_container,
-        "rootfs": f"local-lvm:{disk_size}",
-        "net0": "name=eth0,bridge=vmbr1,ip=dhcp,",  # tag=10 TODO: for adding the vlan_id
-        "unprivileged": 0,
-        "features": "keyctl=1,nesting=1",  # required for k3s in LXC
-        "start": 0,
-    }
 
     selected_template_object = next(
         template
@@ -179,6 +151,37 @@ def create_container(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
             time.sleep(2)
 
     else:
+
+
+        memory_in_gb = inquirer.select(
+            message=f"How many GB of RAM you want in the container (MAX: {int(specs['total_memory'])}) :",
+            choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        ).execute()
+
+        cores_in_container = inquirer.select(
+            message=f"How many cores you want in the container (max: {specs['cores_per_socket'] * specs['sockets']}) :",
+            choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        ).execute()
+
+        disk_size = inquirer.select(
+            message="Disk size in GB:",
+            choices=[4, 8, 16, 32, 64, 128],
+        ).execute()
+
+
+        # Container configuration
+        container_config = {
+            "vmid": next_valid_id,
+            "hostname": container_hostname,
+            "ostemplate": selected_template,
+            "memory": int(memory_in_gb * 1024),
+            "cores": cores_in_container,
+            "rootfs": f"local-lvm:{disk_size}",
+            "net0": "name=eth0,bridge=vmbr1,ip=dhcp,",  # tag=10 TODO: for adding the vlan_id
+            "unprivileged": 0,
+            "features": "keyctl=1,nesting=1",  # required for k3s in LXC
+            "start": 0,
+        }
         # Create the container
         proxmox.nodes(selected_node).lxc.create(**container_config)
     
@@ -192,7 +195,9 @@ def create_container(proxmox, vlan_tag, ServiceType: str, ServiceSubType):
 
     container_ip_address = wait_for_ip(proxmox, selected_node, next_valid_id)
 
-    register_host_in_ansible(container_ip_address, "vlan_10", ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
+    VLAN_NAME_FOR_ANSIBLE_INVENTORY = f"vlan_{vlan_tag}"
+
+    register_host_in_ansible(container_ip_address, VLAN_NAME_FOR_ANSIBLE_INVENTORY, ANSIBLE_CONTROL_PANEL_IP, ServiceType, ServiceSubType, container_hostname)
 
     print(f"Container {next_valid_id} created successfully!")
 

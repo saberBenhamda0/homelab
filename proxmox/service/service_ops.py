@@ -32,7 +32,7 @@ def select_service():
     return service
 
 
-def create_managed_docker(proxmox):
+def create_managed_docker(proxmox, vlan_tag):
 
     count = inquirer.select(
         message="How Many Instance you want for this service",
@@ -50,11 +50,11 @@ def create_managed_docker(proxmox):
         else:
             subType = ServiceSubType.WORKER_NODE.name
 
-        create_container(proxmox, 10, ServiceType.MANAGED_DOCKER.name, subType)
+        create_container(proxmox, vlan_tag, ServiceType.MANAGED_DOCKER.name, subType)
         n = n + 1
 
 
-def created_managed_kubernetes(proxmox):
+def created_managed_kubernetes(proxmox, vlan_tag):
     count = inquirer.select(
         message="How Many worker node you want for k8",
         choices=[1, 2, 3, 4, 5, 6],
@@ -71,5 +71,5 @@ def created_managed_kubernetes(proxmox):
         else:
             subType = ServiceSubType.WORKER_NODE.name
 
-        create_vm_example(proxmox, 10, ServiceType.KUBERNETES.name, subType)
+        create_vm_example(proxmox, vlan_tag, ServiceType.KUBERNETES.name, subType)
         n = n + 1

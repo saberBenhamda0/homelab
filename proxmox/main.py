@@ -33,11 +33,11 @@ if __name__ == "__main__":
     result = select_service()
 
     if result == "VM":
-        create_container(proxmox, 10, "VM", "")
+        create_container(proxmox, 20, "VM", "")
     elif result == "MANAGED_DOCKER":
-        create_managed_docker(proxmox)
+        create_managed_docker(proxmox, 10)
     elif result == 'KUBERNETES':
-        created_managed_kubernetes(proxmox)
+        created_managed_kubernetes(proxmox, 10)
     # create_vm_example(proxmox)
     # create_container(proxmox, ...)
     # create_managed_docker(proxmox)
