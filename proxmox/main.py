@@ -32,7 +32,7 @@ if __name__ == "__main__":
     proxmox = connect_with_token()
     # Uncomment these to run examples:
 
-    vlan_tag_string = typer.prompt("Please entre your vlan tag : ")
+    vlan_tag_string = typer.prompt("Please entre your vlan tag")
     vlan_tag = int(vlan_tag_string)
     # print(get_nodes(proxmox))
     result = select_service()
