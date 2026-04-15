@@ -1,6 +1,6 @@
 # Functions related to VM operations
 from shared.utils import wait_for_ip, start_vm, get_nodes, get_node_info, get_next_vmid
-from pfsense.ansible.ansible_ops import register_host_in_ansible
+from ansible.ansible_ops import register_host_in_ansible
 from InquirerPy import inquirer
 import typer
 from config import VLAN_TAG, ANSIBLE_CONTROL_PANEL_IP

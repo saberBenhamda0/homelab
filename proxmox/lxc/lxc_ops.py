@@ -3,7 +3,7 @@ from shared.utils import wait_for_ip
 from shared.utils import _wait_for_task
 from shared.utils import start_container
 from shared.utils import get_nodes, get_node_info, get_next_vmid
-from pfsense.ansible.ansible_ops import register_host_in_ansible, unregister_host_from_ansible
+from ansible.ansible_ops import register_host_in_ansible, unregister_host_from_ansible
 from InquirerPy import inquirer
 import typer
 import time

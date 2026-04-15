@@ -13,7 +13,7 @@ TOKEN_VALUE = os.getenv("PROXMOX_TOKEN")
 
 # Safety Check: Stop the script if the token is missing
 if not TOKEN_VALUE:
-    print("ERROR: Environment variable 'PROXMOX_TOKEN_VALUE' is not set.")
+    print("ERROR: Environment variable 'PROXMOX_TOKEN' is not set.")
     sys.exit(1)
 
 print(f"Successfully loaded token for {USER}@{PROXMOX_IP}")
