@@ -17,8 +17,15 @@ def enable_dhcp_server(new_vlan_id, range_from, range_to, dns_server, gateway, n
         "defaultleasetime": 7200,
         "maxleasetime": 86400,
     }
-    session.post(f"{BASE_URL}/api/v2/services/dhcp_server", json=dhcp_payload)
-    print("[bold green]DHCP server configuration sent.[/bold green]")
+    try:
+        response = session.post(
+            f"{BASE_URL}/api/v2/services/dhcp_server",
+            json=dhcp_payload
+        )
+        response.raise_for_status()
+        print("[bold green]DHCP server configured successfully.[/bold green]")
+    except Exception as e:
+        print(f"[bold red]Error configuring DHCP: {e}[/bold red]")
 
 def apply_dhcp_changes():
     print("[bold blue]Step 5:[/bold blue] Applying DHCP changes and waiting...")
