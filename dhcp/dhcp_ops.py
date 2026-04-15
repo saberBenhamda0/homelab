@@ -6,6 +6,7 @@ from rich import print
 
 def enable_dhcp_server(new_vlan_id, range_from, range_to, dns_server, gateway, name):
     dhcp_payload = {
+        "id": new_vlan_id,
         "interface": new_vlan_id,
         "enable": True,
         "range_from": range_from,
