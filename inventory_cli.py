@@ -8,7 +8,7 @@ app = typer.Typer()
 yaml = YAML()
 yaml.preserve_quotes = True
 
-INVENTORY_FILE = "/root/ansible/inventory.yaml"
+INVENTORY_FILE = "./inventory.yaml"
 SSH_KEY   = "~/.ssh/id_rsa"
 
 
@@ -431,6 +431,42 @@ def verify_adding(IP):
     # ── Step 4: Test Ansible connection ───────────────
     subprocess.run(["ansible", "-i", INVENTORY_FILE, IP, "-m", "ping"])
     print(f"✅ {IP} is ready in Ansible!")
+
+def collect_hosts(data):
+    results = []
+    def walk(node, path=None):
+        if path is None:
+            path = []
+        if isinstance(node, dict):
+            # If this node has 'ansible_host', it's a host entry
+            if 'ansible_host' in node:
+                results.append({
+                    'type': ' '.join(path[:-1]),
+                    'name': path[-1],
+                    'ip': node['ansible_host']
+                })
+            else:
+                for k, v in node.items():
+                    walk(v, path + [k])
+    walk(data)
+    return results
+
+@app.command()
+def list_hosts(
+    vlan: str = typer.Option(..., "--vlan", "-v", help="VLAN name to filter (e.g. vlan10)")
+):
+    """List all hosts with their type, name, and IP address for a specific VLAN."""
+    data = load()
+    vlan_data = data.get("all", {}).get("children", {}).get(vlan)
+    if not vlan_data:
+        typer.echo(f"VLAN '{vlan}' not found.")
+        return
+    hosts = collect_hosts(vlan_data)
+    if not hosts:
+        typer.echo(f"No hosts found in VLAN '{vlan}'.")
+        return
+    for h in hosts:
+        typer.echo(f"{h['type']:<30} {h['name']:<15} {h['ip']}")
 
 if __name__ == "__main__":
     app()
