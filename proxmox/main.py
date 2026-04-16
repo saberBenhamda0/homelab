@@ -6,7 +6,8 @@ import typer
 
 from lxc.lxc_ops import create_container
 
-# Imports for refactored structure
+# Imports for refactored 
+from ansible.ansible_ops import show_vlan_hosts
 from service.service_ops import create_managed_docker, select_service, created_managed_kubernetes
 from config import ANSIBLE_CONTROL_PANEL_IP, PROXMOX_IP, TOKEN_NAME, TOKEN_VALUE, USER
 from shared.utils import ServiceType
@@ -33,6 +34,9 @@ if __name__ == "__main__":
 
     vlan_tag_string = typer.prompt("Please entre your vlan tag")
     vlan_tag = int(vlan_tag_string)
+
+    show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
+
     result = select_service()
 
     if result == ServiceType.VM.name:

@@ -159,3 +159,29 @@ def unregister_host_from_ansible(
     else:
         print(result.stdout)
         print(f"[bold red]✗ Failed: {result.stderr}[/bold red]")
+
+
+def show_vlan_hosts(
+    vlan_tag: str          = typer.Argument(..., help="vlan tag of the hosts we going to return"),
+    ansible_host: str = typer.Option("192.168.1.9", help="Ansible server IP")
+):
+    """SSH into Ansible container and get avaible hosts"""
+    print(f"[bold blue] return hosts for vlan_{vlan_tag} from Ansible...[/bold blue]")
+
+
+    result = subprocess.run([
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        f"root@{ansible_host}",
+        f"python3 /root/ansible/inventory_cli.py list-hosts --vlan vlan_{vlan_tag}",
+    ], capture_output=True, text=True)
+
+    if result.returncode == 0:
+        print(result.stdout)
+        print(f"[bold green]✓ hosts for vlan_{vlan_tag} has been returned with success[/bold green]")
+    else:
+        print(result.stdout)
+        print(f"[bold red]✗ Failed: {result.stderr}[/bold red]")
+    
+    return result.stdout
