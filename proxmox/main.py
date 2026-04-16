@@ -35,7 +35,7 @@ if __name__ == "__main__":
     vlan_tag_string = typer.prompt("Please entre your vlan tag")
     vlan_tag = int(vlan_tag_string)
 
-    show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
+    existing_vlan_hosts = show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
 
     result = select_service()
 

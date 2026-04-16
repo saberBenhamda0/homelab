@@ -178,7 +178,6 @@ def show_vlan_hosts(
     ], capture_output=True, text=True)
 
     if result.returncode == 0:
-        print(result.stdout)
         print(f"[bold green]✓ hosts for vlan_{vlan_tag} has been returned with success[/bold green]")
     else:
         print(result.stdout)
