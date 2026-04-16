@@ -3,6 +3,7 @@ from ruamel.yaml import YAML
 import subprocess
 import time
 import sys
+import json
 
 app = typer.Typer()
 yaml = YAML()
@@ -455,18 +456,17 @@ def collect_hosts(data):
 def list_hosts(
     vlan: str = typer.Option(..., "--vlan", "-v", help="VLAN name to filter (e.g. vlan10)")
 ):
-    """List all hosts with their type, name, and IP address for a specific VLAN."""
+    """List all hosts with their type, name, and IP address for a specific VLAN in JSON format."""
     data = load()
     vlan_data = data.get("all", {}).get("children", {}).get(vlan)
     if not vlan_data:
-        typer.echo(f"VLAN '{vlan}' not found.")
+        typer.echo(json.dumps({"error": f"VLAN '{vlan}' not found."}))
         return
     hosts = collect_hosts(vlan_data)
     if not hosts:
-        typer.echo(f"No hosts found in VLAN '{vlan}'.")
+        typer.echo(json.dumps({"error": f"No hosts found in VLAN '{vlan}'."}))
         return
-    for h in hosts:
-        typer.echo(f"{h['type']:<30} {h['name']:<15} {h['ip']}")
+    typer.echo(json.dumps(hosts, indent=2))
 
 if __name__ == "__main__":
     app()
