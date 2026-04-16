@@ -8,7 +8,7 @@ app = typer.Typer()
 yaml = YAML()
 yaml.preserve_quotes = True
 
-INVENTORY_FILE = "./inventory.yaml"
+INVENTORY_FILE = "/root/ansible/inventory.yaml"
 SSH_KEY   = "~/.ssh/id_rsa"
 
 
