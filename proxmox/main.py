@@ -30,11 +30,9 @@ def connect_with_token():
 # ===============================
 if __name__ == "__main__":
     proxmox = connect_with_token()
-    # Uncomment these to run examples:
 
     vlan_tag_string = typer.prompt("Please entre your vlan tag")
     vlan_tag = int(vlan_tag_string)
-    # print(get_nodes(proxmox))
     result = select_service()
 
     if result == ServiceType.VM.name:
@@ -43,9 +41,3 @@ if __name__ == "__main__":
         create_managed_docker(proxmox, vlan_tag)
     elif result == ServiceType.KUBERNETES.name:
         created_managed_kubernetes(proxmox, vlan_tag)
-    # create_vm_example(proxmox)
-    # create_container(proxmox, ...)
-    # create_managed_docker(proxmox)
-    # delete_container(proxmox, "pve", 103)
-    # create_vm_example(proxmox)
-    # safe_api_call()
