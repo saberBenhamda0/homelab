@@ -100,8 +100,31 @@ def find_vmid_by_container_hostname(proxmox, hostname):
 
 def delete_container_by_hostname(proxmox, hostname):
     container_info = find_vmid_by_container_hostname(proxmox, hostname)
+    timeout = 60
     if container_info:
-        delete_container(proxmox, container_info['node'], container_info['vmid'])
+        print(f"Found container: {container_info}")
+
+        
+        # Delete the container
+        vmid = container_info['vmid']
+        node = container_info['node']
+        
+        # check current status
+        status = proxmox.nodes(node).lxc(vmid).status.current.get()
+        
+        # stop it first if running
+        if status.get("status") == "running":
+            print(f"Stopping container {vmid}...")
+            task_id = proxmox.nodes(node).lxc(vmid).status.stop.post()
+            _wait_for_task(proxmox, node, task_id, timeout)
+            print(f"Container {vmid} stopped.")
+
+        # delete the container
+        print(f"Deleting container {vmid}...")
+        task_id = proxmox.nodes(node).lxc(vmid).delete()
+        _wait_for_task(proxmox, node, task_id, timeout)
+
+        print(f"Container {vmid} deleted.")
     else:
         print("Container not found")
 
