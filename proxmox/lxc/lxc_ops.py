@@ -97,7 +97,7 @@ def find_vmid_by_container_ip(proxmox, target_ip):
     return None
 
 def delete_container_by_ip_address(proxmox, ip_address):
-    container_info = find_vmid_by_container_ip(ip_address)
+    container_info = find_vmid_by_container_ip(proxmox, ip_address)
     if container_info:
         print(f"Found container: {container_info}")
         
