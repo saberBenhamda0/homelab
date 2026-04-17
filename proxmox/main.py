@@ -45,13 +45,10 @@ if __name__ == "__main__":
         (item["name"], item["ip"]) for item in existing_vlan_hosts
     ]
 
-    question = [
-        inquirer.List(
-            "selected_ip",
-            message="Select a host for deleting",
-            choices=choices
-        )
-    ]
+    inquirer.select(
+        message="Select a host for deleting",
+        choices=choices
+    ).execute()
 
 
     if creating_resources == 1:
