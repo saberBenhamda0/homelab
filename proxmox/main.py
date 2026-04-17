@@ -5,10 +5,10 @@ from proxmoxer import ProxmoxAPI
 import typer
 from InquirerPy import inquirer
 
-from lxc.lxc_ops import create_container, find_vmid_by_container_ip, delete_container_by_ip_address
+from lxc.lxc_ops import create_container, delete_container_by_ip_address
 
 # Imports for refactored 
-from ansible.ansible_ops import show_vlan_hosts
+from ansible.ansible_ops import show_vlan_hosts, unregister_host_from_ansible
 from service.service_ops import create_managed_docker, select_service, created_managed_kubernetes
 from config import ANSIBLE_CONTROL_PANEL_IP, PROXMOX_IP, TOKEN_NAME, TOKEN_VALUE, USER
 from shared.utils import ServiceType
@@ -38,22 +38,6 @@ if __name__ == "__main__":
 
     creating_resources = int(typer.prompt("Entre 1 for creating resources and 2 for destroying existing resources"))
 
-    existing_vlan_hosts = show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
-
-
-    choices = [
-        (item["name"], item["ip"]) for item in existing_vlan_hosts
-    ]
-
-    deleted_resource = inquirer.select(
-        message="Select a host for deleting",
-        choices=choices
-    ).execute()
-
-    name, ip = deleted_resource
-
-    delete_container_by_ip_address(proxmox, ip)
-
     if creating_resources == 1:
         result = select_service()
         if result == ServiceType.VM.name:
@@ -62,3 +46,20 @@ if __name__ == "__main__":
             create_managed_docker(proxmox, vlan_tag)
         elif result == ServiceType.KUBERNETES.name:
             created_managed_kubernetes(proxmox, vlan_tag)
+    else:
+        existing_vlan_hosts = show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
+
+        choices = [
+            (item["name"], item["ip"]) for item in existing_vlan_hosts
+        ]
+
+        deleted_resource = inquirer.select(
+            message="Select a host for deleting",
+            choices=choices
+        ).execute()
+
+        name, ip = deleted_resource
+
+        delete_container_by_ip_address(proxmox, ip)
+
+        unregister_host_from_ansible(ip, ANSIBLE_CONTROL_PANEL_IP)
