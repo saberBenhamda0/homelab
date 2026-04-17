@@ -5,7 +5,7 @@ from proxmoxer import ProxmoxAPI
 import typer
 from InquirerPy import inquirer
 
-from lxc.lxc_ops import create_container, delete_container_by_ip_address
+from lxc.lxc_ops import create_container, delete_container_by_hostname
 
 # Imports for refactored 
 from ansible.ansible_ops import show_vlan_hosts, unregister_host_from_ansible
@@ -60,6 +60,6 @@ if __name__ == "__main__":
 
         name, ip = deleted_resource
 
-        delete_container_by_ip_address(proxmox, ip)
+        delete_container_by_hostname(proxmox, name)
 
         unregister_host_from_ansible(ip, ANSIBLE_CONTROL_PANEL_IP)

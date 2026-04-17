@@ -72,32 +72,34 @@ def get_available_lxc_templates(proxmox,node, storage=None):
 
 
 
-def find_vmid_by_container_ip(proxmox, target_ip):
-    """Find LXC container by IP address"""
+def find_vmid_by_container_hostname(proxmox, hostname):
+    """Find LXC container by hostname"""
+
     for node in proxmox.nodes.get():
-        node_name = node['node']
-        
+        node_name = node["node"]
+
         # Get all LXC containers on this node
         for container in proxmox.nodes(node_name).lxc.get():
-            vmid = container['vmid']
-            
+            vmid = container["vmid"]
+
             # Get container config
             config = proxmox.nodes(node_name).lxc(vmid).config.get()
-            
-            # Check network interfaces for matching IP
-            for key, value in config.items():
-                if key.startswith('net'):
-                    # IP format in config: ip=192.168.1.100/24
-                    if 'ip=' in value and target_ip in value:
-                        return {
-                            'vmid': vmid,
-                            'node': node_name,
-                            'name': container.get('name', 'N/A')
-                        }
+
+            # Proxmox stores hostname here
+            config_hostname = config.get("hostname")
+
+            if config_hostname == hostname:
+                return {
+                    "vmid": vmid,
+                    "node": node_name,
+                    "name": container.get("name", "N/A"),
+                    "hostname": config_hostname
+                }
+
     return None
 
-def delete_container_by_ip_address(proxmox, ip_address):
-    container_info = find_vmid_by_container_ip(proxmox, ip_address)
+def delete_container_by_hostname(proxmox, hostname):
+    container_info = find_vmid_by_container_hostname(proxmox, hostname)
     if container_info:
         print(f"Found container: {container_info}")
         
