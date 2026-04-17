@@ -5,7 +5,7 @@ from proxmoxer import ProxmoxAPI
 import typer
 from InquirerPy import inquirer
 
-from lxc.lxc_ops import create_container
+from lxc.lxc_ops import create_container, find_vmid_by_container_ip, delete_container_by_ip_address
 
 # Imports for refactored 
 from ansible.ansible_ops import show_vlan_hosts
@@ -45,11 +45,12 @@ if __name__ == "__main__":
         (item["name"], item["ip"]) for item in existing_vlan_hosts
     ]
 
-    inquirer.select(
+    deleted_resource = inquirer.select(
         message="Select a host for deleting",
         choices=choices
     ).execute()
 
+    delete_container_by_ip_address(proxmox, deleted_resource["ip"])
 
     if creating_resources == 1:
         result = select_service()

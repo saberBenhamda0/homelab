@@ -71,6 +71,50 @@ def get_available_lxc_templates(proxmox,node, storage=None):
     return sorted(templates, key=lambda x: x["name"])
 
 
+
+def find_vmid_by_container_ip(proxmox, target_ip):
+    """Find LXC container by IP address"""
+    for node in proxmox.nodes.get():
+        node_name = node['pve']
+        
+        # Get all LXC containers on this node
+        for container in proxmox.nodes(node_name).lxc.get():
+            vmid = container['vmid']
+            
+            # Get container config
+            config = proxmox.nodes(node_name).lxc(vmid).config.get()
+            
+            # Check network interfaces for matching IP
+            for key, value in config.items():
+                if key.startswith('net'):
+                    # IP format in config: ip=192.168.1.100/24
+                    if 'ip=' in value and target_ip in value:
+                        return {
+                            'vmid': vmid,
+                            'node': node_name,
+                            'name': container.get('name', 'N/A')
+                        }
+    return None
+
+def delete_container_by_ip_address(proxmox, ip_address):
+    container_info = find_vmid_by_container_ip(ip_address)
+    if container_info:
+        print(f"Found container: {container_info}")
+        
+        # Delete the container
+        vmid = container_info['vmid']
+        node = container_info['node']
+        
+        # Stop if running
+        proxmox.nodes(node).lxc(vmid).status.stop.post()
+        
+        # Delete
+        proxmox.nodes(node).lxc(vmid).delete()
+    else:
+        print("Container not found")
+
+
+
 def delete_container(proxmox, node: str, ctid: int, timeout: int = 60):
     """Stop and delete a container by its ID."""
 
