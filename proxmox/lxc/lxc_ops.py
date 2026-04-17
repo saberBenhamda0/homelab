@@ -75,7 +75,7 @@ def get_available_lxc_templates(proxmox,node, storage=None):
 def find_vmid_by_container_ip(proxmox, target_ip):
     """Find LXC container by IP address"""
     for node in proxmox.nodes.get():
-        node_name = node['pve']
+        node_name = node['node']
         
         # Get all LXC containers on this node
         for container in proxmox.nodes(node_name).lxc.get():

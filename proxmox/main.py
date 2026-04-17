@@ -50,7 +50,9 @@ if __name__ == "__main__":
         choices=choices
     ).execute()
 
-    delete_container_by_ip_address(proxmox, deleted_resource)
+    name, ip = deleted_resource
+
+    delete_container_by_ip_address(proxmox, ip)
 
     if creating_resources == 1:
         result = select_service()
