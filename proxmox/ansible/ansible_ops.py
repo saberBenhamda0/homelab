@@ -3,6 +3,7 @@ import typer
 app = typer.Typer()
 from rich import print
 from shared.utils import ServiceType, ServiceSubType
+import json
 
 
 
@@ -183,4 +184,4 @@ def show_vlan_hosts(
         print(result.stdout)
         print(f"[bold red]✗ Failed: {result.stderr}[/bold red]")
     
-    return result.stdout
+    return json.loads(result.stdout)

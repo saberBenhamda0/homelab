@@ -3,6 +3,7 @@
 # ===============================
 from proxmoxer import ProxmoxAPI
 import typer
+from InquirerPy import inquirer
 
 from lxc.lxc_ops import create_container
 
@@ -35,13 +36,29 @@ if __name__ == "__main__":
     vlan_tag_string = typer.prompt("Please entre your vlan tag")
     vlan_tag = int(vlan_tag_string)
 
+    creating_resources = int(typer.prompt("Entre 1 for creating resources and 2 for destroying existing resources"))
+
     existing_vlan_hosts = show_vlan_hosts(vlan_tag, ANSIBLE_CONTROL_PANEL_IP)
 
-    result = select_service()
 
-    if result == ServiceType.VM.name:
-        create_container(proxmox, vlan_tag, ServiceType.VM.name, "")
-    elif result == ServiceType.MANAGED_DOCKER.name:
-        create_managed_docker(proxmox, vlan_tag)
-    elif result == ServiceType.KUBERNETES.name:
-        created_managed_kubernetes(proxmox, vlan_tag)
+    choices = [
+        (item["name"], item["ip"]) for item in existing_vlan_hosts
+    ]
+
+    question = [
+        inquirer.List(
+            "selected_ip",
+            message="Select a host for deleting",
+            choices=choices
+        )
+    ]
+
+
+    if creating_resources == 1:
+        result = select_service()
+        if result == ServiceType.VM.name:
+            create_container(proxmox, vlan_tag, ServiceType.VM.name, "")
+        elif result == ServiceType.MANAGED_DOCKER.name:
+            create_managed_docker(proxmox, vlan_tag)
+        elif result == ServiceType.KUBERNETES.name:
+            created_managed_kubernetes(proxmox, vlan_tag)
